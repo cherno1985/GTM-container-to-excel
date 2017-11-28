@@ -1,0 +1,72 @@
+import json
+import openpyxl
+
+loc = r"{{JSON file location}}"
+events = r"{{The file that get the events, xlsx format}}"
+
+#Load the workbook and sheet
+wb = openpyxl.load_workbook(events)
+ws = wb.get_sheet_by_name('Events')
+
+#Load the JSON file - UTF-8
+dat3 = json.load(open(loc))
+
+
+#Could export to functions - saves the respective category, action and label for UA tags
+
+for j, i in enumerate(dat3['containerVersion']['tag']):
+    try:
+        ws.cell(row=j+2, column=3).value = dat3['containerVersion']['tag'][j]['parentFolderId']
+    except KeyError:
+        pass
+    if dat3['containerVersion']['tag'][j]['type'] == "ua":
+        for k in xrange(0, len(dat3['containerVersion']['tag'][j]['parameter'])):
+            if dat3['containerVersion']['tag'][j]['parameter'][k]['key'] == 'eventCategory':
+                ws.cell(row=j + 2, column=6).value = dat3['containerVersion']['tag'][j]['parameter'][k]['value']
+            if dat3['containerVersion']['tag'][j]['parameter'][k]['key'] == 'eventAction':
+                ws.cell(row=j + 2, column=7).value = dat3['containerVersion']['tag'][j]['parameter'][k]['value']
+            if dat3['containerVersion']['tag'][j]['parameter'][k]['key'] == 'eventLabel':
+                ws.cell(row=j + 2, column=8).value = dat3['containerVersion']['tag'][j]['parameter'][k]['value']
+    ws.cell(row=j + 2, column=2).value = dat3['containerVersion']['tag'][j]['name']  # Trigger Id
+    try:
+        ws.cell(row=j + 2, column=4).value = dat3['containerVersion']['tag'][j]['firingTriggerId'][0]
+    except KeyError:
+        pass
+
+total = j
+
+
+#saves all the trigger in a dictionary - trigger ID:trigger name
+trigger_bank = {}
+for i in xrange(0, len(dat3['containerVersion']['trigger'])):
+    trigger_bank[dat3['containerVersion']['trigger'][i]['triggerId']] = dat3['containerVersion']['trigger'][i]['name']
+
+for j in xrange(0, total):
+    try:
+        ws.cell(row=j + 1, column=5).value = trigger_bank[ws.cell(row=j + 1, column=4).value]
+    except KeyError:
+        pass
+    ws.cell(row=j + 2, column=2).value = dat3['containerVersion']['tag'][j]['name']  # Trigger Id
+
+#saves all the trigger in a dictionary - Folder ID : Folder name
+folder_bank = {}
+for i in xrange(0, len(dat3['containerVersion']['folder'])):
+    folder_bank[dat3['containerVersion']['folder'][i]['folderId']] =dat3['containerVersion']['folder'][i]['name']
+
+for j in xrange(0, total):
+    try:
+        ws.cell(row=j + 1, column=3).value = folder_bank[ws.cell(row=j + 1, column=3).value]
+    except KeyError:
+        pass
+
+# Lazy Header
+ws.cell(row=1, column=2).value = "Tag name"
+ws.cell(row=1, column=3).value = "Folder"
+ws.cell(row=1, column=4).value = "Trigger ID"
+ws.cell(row=1, column=5).value = "Event Trigger"
+ws.cell(row=1, column=6).value = "Event Category"
+ws.cell(row=1, column=7).value = "Event Action"
+ws.cell(row=1, column=8).value = "Event Label"
+
+
+wb.save(events)
